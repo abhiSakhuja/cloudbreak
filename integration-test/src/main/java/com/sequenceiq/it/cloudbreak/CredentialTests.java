@@ -10,13 +10,14 @@ import com.sequenceiq.it.cloudbreak.newway.cloud.OpenstackCloudProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import javax.ws.rs.BadRequestException;
+import javax.ws.rs.ForbiddenException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -174,17 +175,22 @@ public class CredentialTests extends CloudbreakTest {
         }
     }
 
-    @AfterClass
+    @AfterSuite
     public void cleanUp() throws Exception {
         String[] nameArray = {VALID_AWSKEY_CRED_NAME, VALID_OSV3_CRED_NAME};
 
         for (int i = 0; i < nameArray.length; i++) {
             LOGGER.info("Delete credential: \'{}\'", nameArray[i].toLowerCase().trim());
-
-            given(CloudbreakClient.isCreated());
-            given(Credential.request()
-                    .withName(nameArray[i]));
-            when(Credential.delete());
+            try {
+                given(CloudbreakClient.isCreated());
+                given(Credential.request()
+                        .withName(nameArray[i]));
+                when(Credential.delete());
+            } catch (ForbiddenException e) {
+                String exceptionMessage = e.getResponse().readEntity(String.class);
+                this.errorMessage = exceptionMessage.substring(exceptionMessage.lastIndexOf(":") + 1);
+                LOGGER.info("ForbiddenException message ::: " + this.errorMessage);
+            }
         }
     }
 
